@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Matriz de Eisenhower — Ordená tus pendientes</title>
+<meta name="description" content="Cargá tus pendientes, puntuá urgencia, prioridad y tiempo, arrastralos entre cuadrantes y descargá tu plan en Excel, Word o PDF." />
+
+<!-- Librerías para exportar -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+  :root {
+    --bg: #0f1220;
+    --bg-soft: #171a2e;
+    --card: #1e2138;
+    --card-2: #252a45;
+    --line: #313657;
+    --text: #eef0ff;
+    --muted: #9aa0c7;
+    --accent: #7c5cff;
+    --accent-2: #00d4b8;
+
+    --urg: #ef4444;
+    --prio: #3b82f6;
+    --time: #00c2a8;
+
+    --q1: #ef4444; --q1-bg: rgba(239,68,68,.10);
+    --q2: #3b82f6; --q2-bg: rgba(59,130,246,.10);
+    --q3: #f59e0b; --q3-bg: rgba(245,158,11,.10);
+    --q4: #64748b; --q4-bg: rgba(100,116,139,.10);
+
+    --radius: 16px;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f5fb; --bg-soft: #ffffff; --card: #ffffff; --card-2: #f6f7fd;
+      --line: #e5e7f2; --text: #1a1d33; --muted: #6b7096;
+      --shadow: 0 12px 40px rgba(30,34,80,.10);
+      --q1-bg: rgba(239,68,68,.07); --q2-bg: rgba(59,130,246,.07);
+      --q3-bg: rgba(245,158,11,.09); --q4-bg: rgba(100,116,139,.09);
+    }
+  }
+  :root[data-theme="light"] {
+      --bg: #f4f5fb; --bg-soft: #ffffff; --card: #ffffff; --card-2: #f6f7fd;
+      --line: #e5e7f2; --text: #1a1d33; --muted: #6b7096;
+      --shadow: 0 12px 40px rgba(30,34,80,.10);
+      --q1-bg: rgba(239,68,68,.07); --q2-bg: rgba(59,130,246,.07);
+      --q3-bg: rgba(245,158,11,.09); --q4-bg: rgba(100,116,139,.09);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(124,92,255,.18), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(0,212,184,.14), transparent 55%),
+      var(--bg);
+    color: var(--text); min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 80px; }
+
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 13px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 22px; box-shadow: var(--shadow);
+  }
+  .brand h1 { font-size: 21px; margin: 0; letter-spacing: -.3px; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .theme-btn {
+    background: var(--card); color: var(--text); border: 1px solid var(--line);
+    padding: 9px 14px; border-radius: 11px; cursor: pointer; font-size: 13px; font-weight: 600; transition: .15s;
+  }
+  .theme-btn:hover { border-color: var(--accent); }
+
+  .grid-main { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .grid-main { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.2px; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 18px; }
+
+  label.field { display: block; margin-bottom: 14px; }
+  label.field span { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  input[type="text"], textarea {
+    width: 100%; background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 11px; padding: 11px 13px; font-size: 14px; font-family: inherit; resize: vertical; transition: .15s;
+  }
+  input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,92,255,.18); }
+  textarea { min-height: 60px; }
+
+  /* Escalas */
+  .scale { margin-bottom: 16px; }
+  .scale-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .scale-head .name { font-size: 12.5px; font-weight: 700; }
+  .scale-head .name.urg { color: var(--urg); }
+  .scale-head .name.prio { color: var(--prio); }
+  .scale-head .name.time { color: var(--time); }
+  .scale-head .val { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .pills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .pills.time { grid-template-columns: repeat(6, 1fr); }
+  .pill {
+    border: 1px solid var(--line); background: var(--card-2); color: var(--muted);
+    border-radius: 9px; padding: 9px 0; font-weight: 800; font-size: 13.5px; cursor: pointer; transition: .12s; text-align: center;
+  }
+  .pill:hover { border-color: var(--muted); }
+  .pills.urg  .pill.sel { background: var(--urg);  border-color: var(--urg);  color: #fff; }
+  .pills.prio .pill.sel { background: var(--prio); border-color: var(--prio); color: #fff; }
+  .pills.time .pill.sel { background: var(--time); border-color: var(--time); color: #04201c; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; border: none; cursor: pointer; font-weight: 700; font-size: 14.5px;
+    padding: 13px 16px; border-radius: 12px; color: #fff;
+    background: linear-gradient(135deg, var(--accent), #9b7bff);
+    transition: .15s; box-shadow: 0 8px 20px rgba(124,92,255,.35);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.secondary { background: var(--card-2); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+  .btn.secondary:hover { border-color: var(--accent); }
+
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 12px; text-align: center; }
+  .hint kbd { background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+  .stat { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; text-align: center; }
+  .stat .n { font-size: 24px; font-weight: 800; }
+  .stat .l { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .stat.s1 .n { color: var(--q1); } .stat.s2 .n { color: var(--q2); }
+  .stat.s3 .n { color: var(--q3); } .stat.s4 .n { color: var(--q4); }
+
+  .mini-stats {
+    display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted);
+    margin-bottom: 16px; padding: 10px 13px; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .mini-stats b { color: var(--text); }
+
+  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .matrix { grid-template-columns: 1fr; } }
+
+  .quad { border-radius: var(--radius); border: 1.5px solid var(--line); padding: 16px; min-height: 200px; display: flex; flex-direction: column; transition: .12s; }
+  .quad.q1 { border-color: var(--q1); background: var(--q1-bg); }
+  .quad.q2 { border-color: var(--q2); background: var(--q2-bg); }
+  .quad.q3 { border-color: var(--q3); background: var(--q3-bg); }
+  .quad.q4 { border-color: var(--q4); background: var(--q4-bg); }
+  .quad.drop-hover { box-shadow: 0 0 0 3px var(--accent) inset; transform: scale(1.005); }
+
+  .quad-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .quad-head .qname { font-weight: 800; font-size: 15px; }
+  .quad.q1 .qname { color: var(--q1); } .quad.q2 .qname { color: var(--q2); }
+  .quad.q3 .qname { color: var(--q3); } .quad.q4 .qname { color: var(--q4); }
+  .quad-head .qcount { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .quad .qmeta { font-size: 11.5px; color: var(--muted); margin: 0 0 12px; }
+  .q-list { flex: 1; min-height: 40px; }
+
+  .task {
+    background: var(--card); border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 12px 9px; margin-bottom: 9px; position: relative; cursor: grab;
+  }
+  .task:active { cursor: grabbing; }
+  .task.dragging { opacity: .45; }
+  .task .rank {
+    position: absolute; top: -7px; left: -7px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 20px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800;
+    display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  }
+  .task .tt { font-weight: 700; font-size: 13.5px; padding-right: 46px; }
+  .task .td { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: pre-wrap; word-break: break-word; }
+  .task .badges { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .task .badge { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); }
+  .task .badge.u { color: var(--urg); border-color: var(--urg); background: var(--q1-bg); }
+  .task .badge.p { color: var(--prio); border-color: var(--prio); background: var(--q2-bg); }
+  .task .badge.t { color: var(--time); border-color: var(--time); background: rgba(0,194,168,.10); }
+  .task .icobtn {
+    position: absolute; width: 20px; height: 20px; border-radius: 6px; border: none; background: transparent;
+    color: var(--muted); cursor: pointer; line-height: 1; display: grid; place-items: center; transition: .15s;
+  }
+  .task .edit { top: 8px; right: 30px; font-size: 12px; }
+  .task .edit:hover { background: var(--card-2); color: var(--accent); }
+  .task .del { top: 8px; right: 8px; font-size: 15px; }
+  .task .del:hover { background: var(--q1-bg); color: var(--q1); }
+  .quad .empty { color: var(--muted); font-size: 12.5px; font-style: italic; margin: auto 0; text-align: center; opacity: .7; padding: 14px 0; }
+
+  .export-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+  .export-bar .lbl { font-size: 13px; color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .exp {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; font-size: 13.5px;
+    padding: 11px 16px; border-radius: 11px; color: #fff; border: none; transition: .15s;
+  }
+  .exp:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .exp.qw    { background: var(--time); color: #04201c; }
+  .exp.excel { background: #16a34a; }
+  .exp.word  { background: #2563eb; }
+  .exp.pdf   { background: #dc2626; }
+  .exp.clear { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); }
+  .exp.clear:hover { color: var(--q1); border-color: var(--q1); transform: none; }
+  .exp svg { width: 16px; height: 16px; }
+
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 16px; flex-wrap: wrap; gap: 10px; }
+  .section-title h2 { margin: 0; font-size: 17px; }
+  .section-title .desc { color: var(--muted); font-size: 12.5px; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(6,8,18,.6); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 200; padding: 16px; }
+  .overlay[hidden] { display: none; }
+  .modal-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 22px; width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; }
+  .modal-card h3 { margin: 0 0 4px; font-size: 17px; }
+  .modal-card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions .btn { width: auto; flex: 1; }
+  .qw-item {
+    background: var(--card-2); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .qw-item .qt { font-weight: 700; font-size: 13.5px; }
+  .qw-item .qd { font-size: 11.5px; color: var(--muted); }
+  .qw-item .qtime { font-size: 11px; font-weight: 800; color: var(--time); border: 1px solid var(--time); background: rgba(0,194,168,.10); border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #111; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
+    box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: .25s; z-index: 300; border: 1px solid rgba(255,255,255,.12);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo">◱</div>
+      <div>
+        <h1>Matriz de Eisenhower</h1>
+        <p>Puntuá, arrastrá entre cuadrantes y llevate tu plan de acción.</p>
+      </div>
+    </div>
+    <button class="theme-btn" id="themeBtn">🌙 / ☀️ Tema</button>
+  </header>
+
+  <div class="grid-main">
+
+    <aside>
+      <div class="card">
+        <h2>Cargar un tema</h2>
+        <p class="sub">Anotá todo lo que tengas dando vueltas. Uno por uno.</p>
+
+        <label class="field">
+          <span>Título del tema *</span>
+          <input type="text" id="title" placeholder="Ej: Responder mail del contador" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Descripción / qué hay que hacer</span>
+          <textarea id="desc" placeholder="Ej: Enviarle las facturas de agosto antes del cierre."></textarea>
+        </label>
+
+        <div class="scale">
+          <div class="scale-head"><span class="name urg">⚡ Urgencia</span><span class="val" id="urgVal">Baja</span></div>
+          <div class="pills urg" id="urgPills"></div>
+        </div>
+
+        <div class="scale">
+          <div class="scale-head"><span class="name prio">⭐ Prioridad</span><span class="val" id="prioVal">Media</span></div>
+          <div class="pills prio" id="prioPills"></div>
+        </div>
+
+        <div class="scale">
+          <div class="scale-head"><span class="name time">⏱️ Tiempo estimado</span><span class="val" id="timeVal">Sin estimar</span></div>
+          <div class="pills time" id="timePills"></div>
+        </div>
+
+        <button class="btn" id="addBtn">＋ Agregar a la matriz</button>
+        <p class="hint">1–2 = bajo · 3–5 = alto &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> para agregar rápido</p>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>Resumen</h2>
+        <p class="sub">Cómo se reparten tus temas.</p>
+        <div class="stats">
+          <div class="stat s1"><div class="n" id="c1">0</div><div class="l">Hacé ya</div></div>
+          <div class="stat s2"><div class="n" id="c2">0</div><div class="l">Planificá</div></div>
+          <div class="stat s3"><div class="n" id="c3">0</div><div class="l">Delegá</div></div>
+          <div class="stat s4"><div class="n" id="c4">0</div><div class="l">Después</div></div>
+        </div>
+        <div class="mini-stats">
+          <span>⏱️ Tiempo total: <b id="totalTime">—</b></span>
+          <span>⚡ Quick wins: <b id="qwCount">0</b></span>
+        </div>
+        <button class="btn secondary" id="demoBtn">Cargar ejemplo de prueba</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="card">
+        <div class="section-title">
+          <h2>Tu matriz</h2>
+          <div class="desc">Arrastrá una card a otro cuadrante · ✎ para editar</div>
+        </div>
+
+        <div class="matrix">
+          <div class="quad q1" id="q1" data-q="1">
+            <div class="quad-head"><span class="qname">🔥 Hacé ya</span><span class="qcount" id="qc1">0</span></div>
+            <p class="qmeta">Urgente + Prioritario · Prioridad máxima</p>
+            <div class="q-list" id="list1"></div>
+          </div>
+          <div class="quad q2" id="q2" data-q="2">
+            <div class="quad-head"><span class="qname">📅 Planificá</span><span class="qcount" id="qc2">0</span></div>
+            <p class="qmeta">Prioritario, no urgente · Agendá cuándo</p>
+            <div class="q-list" id="list2"></div>
+          </div>
+          <div class="quad q3" id="q3" data-q="3">
+            <div class="quad-head"><span class="qname">🤝 Delegá / rápido</span><span class="qcount" id="qc3">0</span></div>
+            <p class="qmeta">Urgente, poco prioritario · Delegá o resolvelo ya</p>
+            <div class="q-list" id="list3"></div>
+          </div>
+          <div class="quad q4" id="q4" data-q="4">
+            <div class="quad-head"><span class="qname">🗑️ Después / eliminá</span><span class="qcount" id="qc4">0</span></div>
+            <p class="qmeta">Ni urgente ni prioritario · Bajá la prioridad</p>
+            <div class="q-list" id="list4"></div>
+          </div>
+        </div>
+
+        <div class="export-bar">
+          <button class="exp qw" id="qwBtn">⚡ Quick wins</button>
+          <span class="lbl" style="margin-left:8px;">Descargar:</span>
+          <button class="exp excel" id="expExcel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Excel
+          </button>
+          <button class="exp word" id="expWord">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Word
+          </button>
+          <button class="exp pdf" id="expPdf">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            PDF
+          </button>
+          <button class="exp clear" id="clearBtn" style="margin-left:auto;">🧹 Borrar todo</button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>Se guarda solo en tu navegador. Podés cerrar y volver, tus temas siguen acá.</footer>
+</div>
+
+<!-- Modal editar -->
+<div class="overlay" id="editModal" hidden>
+  <div class="modal-card">
+    <h3>Editar tema</h3>
+    <p class="sub">Cambiá lo que quieras y guardá.</p>
+    <label class="field"><span>Título del tema *</span><input type="text" id="mTitle" autocomplete="off" /></label>
+    <label class="field"><span>Descripción</span><textarea id="mDesc"></textarea></label>
+    <div class="scale">
+      <div class="scale-head"><span class="name urg">⚡ Urgencia</span><span class="val" id="mUrgVal"></span></div>
+      <div class="pills urg" id="mUrgPills"></div>
+    </div>
+    <div class="scale">
+      <div class="scale-head"><span class="name prio">⭐ Prioridad</span><span class="val" id="mPrioVal"></span></div>
+      <div class="pills prio" id="mPrioPills"></div>
+    </div>
+    <div class="scale">
+      <div class="scale-head"><span class="name time">⏱️ Tiempo estimado</span><span class="val" id="mTimeVal"></span></div>
+      <div class="pills time" id="mTimePills"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="mCancel">Cancelar</button>
+      <button class="btn" id="mSave">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal quick wins -->
+<div class="overlay" id="qwModal" hidden>
+  <div class="modal-card">
+    <h3>⚡ Quick wins</h3>
+    <p class="sub" id="qwSummary"></p>
+    <div id="qwList"></div>
+    <div class="modal-actions"><button class="btn secondary" id="qwClose" style="flex:1;">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const KEY = "eisenhower_tasks_v2";
+  let tasks = [];
+  let form = { urgency: 2, importance: 3, estimate: null };
+  let editForm = { urgency: 3, importance: 3, estimate: null };
+  let editingId = null;
+
+  const SCALE_LABELS = { 1: "Muy baja", 2: "Baja", 3: "Media", 4: "Alta", 5: "Muy alta" };
+  const HIGH = 3;
+  const SCORE_VALS = [1,2,3,4,5];
+  const SCORE_TXT  = ["1","2","3","4","5"];
+  const TIME_VALS  = [5,15,30,60,120,240];
+  const TIME_TXT   = ["5m","15m","30m","1h","2h","4h+"];
+  const TIME_LBL   = { 5:"5 min", 15:"15 min", 30:"30 min", 60:"1 hora", 120:"2 horas", 240:"4+ horas" };
+
+  const QUAD = {
+    1: { name: "Hacé ya (Urgente + Prioritario)",              accion: "Hacelo primero, hoy." },
+    2: { name: "Planificá (Prioritario, no urgente)",          accion: "Agendá una fecha." },
+    3: { name: "Delegá / rápido (Urgente, poco prioritario)",  accion: "Delegalo o resolvelo rápido." },
+    4: { name: "Después / eliminá (Ni urgente ni prioritario)", accion: "Bajá la prioridad o descartalo." }
+  };
+
+  function quadOf(t) {
+    const u = t.urgency >= HIGH, p = t.importance >= HIGH;
+    if (u && p) return 1;
+    if (!u && p) return 2;
+    if (u && !p) return 3;
+    return 4;
+  }
+
+  // ---------- Persistencia ----------
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch (e) {} }
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { tasks = (JSON.parse(raw) || []).map(normalize); return; }
+      const old = localStorage.getItem("eisenhower_tasks_v1");
+      if (old) {
+        tasks = (JSON.parse(old) || []).map((t) => ({
+          id: t.id, title: t.title, desc: t.desc,
+          urgency: t.urgent ? 4 : 2, importance: t.important ? 4 : 2, estimate: null
+        }));
+        save();
+      }
+    } catch (e) { tasks = []; }
+  }
+  function normalize(t) {
+    return { id: t.id, title: t.title, desc: t.desc || "",
+      urgency: t.urgency || 2, importance: t.importance || 2,
+      estimate: (t.estimate === undefined ? null : t.estimate) };
+  }
+
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(t._to); t._to = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  function fmtBadge(min) {
+    if (min == null) return "";
+    if (min >= 240) return "4h+";
+    if (min < 60) return min + "m";
+    const h = Math.floor(min / 60), m = min % 60;
+    return m ? `${h}h ${m}m` : `${h}h`;
+  }
+  function fmtLong(min) {
+    if (!min) return "0 min";
+    const h = Math.floor(min / 60), m = min % 60;
+    if (h && m) return `${h} h ${m} min`;
+    if (h) return `${h} h`;
+    return `${m} min`;
+  }
+
+  // ---------- Pills ----------
+  // Construye una fila de pills reutilizable.
+  function buildPillRow(container, values, texts, getSel, setSel, valEl, labelMap, allowNull) {
+    container.innerHTML = "";
+    values.forEach((v, i) => {
+      const b = document.createElement("div");
+      b.className = "pill" + (getSel() === v ? " sel" : "");
+      b.textContent = texts[i];
+      b.onclick = () => {
+        let nv = v;
+        if (allowNull && getSel() === v) nv = null; // volver a tocar = deseleccionar
+        setSel(nv);
+        [...container.children].forEach((el, idx) => el.classList.toggle("sel", values[idx] === nv));
+        if (valEl) valEl.textContent = nv == null ? (allowNull ? "Sin estimar" : "") : labelMap[nv];
+      };
+      container.appendChild(b);
+    });
+    if (valEl) { const s = getSel(); valEl.textContent = s == null ? (allowNull ? "Sin estimar" : "") : labelMap[s]; }
+  }
+
+  function buildFormPills() {
+    buildPillRow($("urgPills"),  SCORE_VALS, SCORE_TXT, () => form.urgency,    (v) => form.urgency = v,    $("urgVal"),  SCALE_LABELS, false);
+    buildPillRow($("prioPills"), SCORE_VALS, SCORE_TXT, () => form.importance, (v) => form.importance = v, $("prioVal"), SCALE_LABELS, false);
+    buildPillRow($("timePills"), TIME_VALS,  TIME_TXT,  () => form.estimate,   (v) => form.estimate = v,   $("timeVal"), TIME_LBL,     true);
+  }
+
+  // ---------- Orden y render ----------
+  function score(t) { return t.urgency + t.importance; }
+  function ordered() {
+    return tasks.slice().sort((a, b) => {
+      const qa = quadOf(a), qb = quadOf(b);
+      if (qa !== qb) return qa - qb;
+      if (score(b) !== score(a)) return score(b) - score(a);
+      if (b.importance !== a.importance) return b.importance - a.importance;
+      return (a.title || "").localeCompare(b.title || "");
+    });
+  }
+
+  function isQuickWin(t) { return t.estimate != null && t.estimate <= 15; }
+
+  function render() {
+    const all = ordered();
+    const rankMap = {};
+    all.forEach((t, i) => { rankMap[t.id] = i + 1; });
+
+    const buckets = { 1: [], 2: [], 3: [], 4: [] };
+    all.forEach((t) => buckets[quadOf(t)].push(t));
+
+    for (let q = 1; q <= 4; q++) {
+      const list = $("list" + q);
+      const arr = buckets[q];
+      $("qc" + q).textContent = arr.length;
+      $("c" + q).textContent = arr.length;
+      if (!arr.length) { list.innerHTML = '<div class="empty">Soltá una card acá…</div>'; continue; }
+      list.innerHTML = arr.map((t) => `
+        <div class="task" draggable="true" data-id="${t.id}">
+          <span class="rank">${rankMap[t.id]}</span>
+          <button class="icobtn edit" data-id="${t.id}" title="Editar">✎</button>
+          <button class="icobtn del" data-id="${t.id}" title="Eliminar">×</button>
+          <div class="tt">${esc(t.title)}</div>
+          ${t.desc ? `<div class="td">${esc(t.desc)}</div>` : ""}
+          <div class="badges">
+            <span class="badge u">⚡ ${t.urgency}</span>
+            <span class="badge p">⭐ ${t.importance}</span>
+            ${t.estimate != null ? `<span class="badge t">⏱️ ${fmtBadge(t.estimate)}</span>` : ""}
+          </div>
+        </div>`).join("");
+    }
+
+    document.querySelectorAll(".del").forEach((b) => {
+      b.onclick = (e) => { e.stopPropagation(); removeTask(b.dataset.id); };
+    });
+    document.querySelectorAll(".edit").forEach((b) => {
+      b.onclick = (e) => { e.stopPropagation(); openEdit(b.dataset.id); };
+    });
+    document.querySelectorAll(".task").forEach(bindDrag);
+
+    // Resumen de tiempo
+    const totalMin = tasks.reduce((a, t) => a + (t.estimate || 0), 0);
+    $("totalTime").textContent = totalMin ? fmtLong(totalMin) : "—";
+    $("qwCount").textContent = tasks.filter(isQuickWin).length;
+  }
+
+  // ---------- Drag & drop ----------
+  let draggingId = null;
+  function bindDrag(el) {
+    el.addEventListener("dragstart", (e) => {
+      draggingId = el.dataset.id; el.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", draggingId); } catch (x) {}
+    });
+    el.addEventListener("dragend", () => {
+      draggingId = null; el.classList.remove("dragging");
+      document.querySelectorAll(".quad").forEach((q) => q.classList.remove("drop-hover"));
+    });
+  }
+  document.querySelectorAll(".quad").forEach((quad) => {
+    quad.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+    quad.addEventListener("dragenter", (e) => { e.preventDefault(); quad.classList.add("drop-hover"); });
+    quad.addEventListener("dragleave", (e) => { if (!quad.contains(e.relatedTarget)) quad.classList.remove("drop-hover"); });
+    quad.addEventListener("drop", (e) => {
+      e.preventDefault(); quad.classList.remove("drop-hover");
+      const id = draggingId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+      if (id) moveToQuad(id, parseInt(quad.dataset.q, 10));
+    });
+  });
+  function adjustAxis(current, wantHigh) {
+    const isHigh = current >= HIGH;
+    if (wantHigh && !isHigh) return 4;
+    if (!wantHigh && isHigh) return 2;
+    return current;
+  }
+  function moveToQuad(id, q) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t || quadOf(t) === q) return;
+    t.urgency = adjustAxis(t.urgency, (q === 1 || q === 3));
+    t.importance = adjustAxis(t.importance, (q === 1 || q === 2));
+    save(); render();
+  }
+
+  // ---------- Alta ----------
+  function addTask() {
+    const title = $("title").value.trim();
+    if (!title) { toast("Escribí un título 🙂"); $("title").focus(); return; }
+    tasks.push({
+      id: "t" + Date.now() + Math.random().toString(36).slice(2, 6),
+      title, desc: $("desc").value.trim(),
+      urgency: form.urgency, importance: form.importance, estimate: form.estimate
+    });
+    save(); render();
+    $("title").value = ""; $("desc").value = "";
+    form = { urgency: 2, importance: 3, estimate: null };
+    buildFormPills();
+    $("title").focus();
+    toast("Tema agregado ✔");
+  }
+  function removeTask(id) { tasks = tasks.filter((t) => t.id !== id); save(); render(); }
+
+  // ---------- Editar ----------
+  function openEdit(id) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    editingId = id;
+    editForm = { urgency: t.urgency, importance: t.importance, estimate: t.estimate };
+    $("mTitle").value = t.title;
+    $("mDesc").value = t.desc || "";
+    buildPillRow($("mUrgPills"),  SCORE_VALS, SCORE_TXT, () => editForm.urgency,    (v) => editForm.urgency = v,    $("mUrgVal"),  SCALE_LABELS, false);
+    buildPillRow($("mPrioPills"), SCORE_VALS, SCORE_TXT, () => editForm.importance, (v) => editForm.importance = v, $("mPrioVal"), SCALE_LABELS, false);
+    buildPillRow($("mTimePills"), TIME_VALS,  TIME_TXT,  () => editForm.estimate,   (v) => editForm.estimate = v,   $("mTimeVal"), TIME_LBL,     true);
+    showOverlay("editModal");
+    setTimeout(() => $("mTitle").focus(), 30);
+  }
+  function saveEdit() {
+    const t = tasks.find((x) => x.id === editingId);
+    if (!t) { hideOverlay("editModal"); return; }
+    const title = $("mTitle").value.trim();
+    if (!title) { toast("El título no puede quedar vacío"); $("mTitle").focus(); return; }
+    t.title = title;
+    t.desc = $("mDesc").value.trim();
+    t.urgency = editForm.urgency;
+    t.importance = editForm.importance;
+    t.estimate = editForm.estimate;
+    save(); render(); hideOverlay("editModal");
+    toast("Tema actualizado ✔");
+  }
+
+  // ---------- Quick wins ----------
+  function openQuickWins() {
+    const qs = ordered().filter(isQuickWin);
+    const total = qs.reduce((a, t) => a + t.estimate, 0);
+    $("qwSummary").textContent = qs.length
+      ? `${qs.length} ${qs.length === 1 ? "tarea corta" : "tareas cortas"} (≤15 min) · ${fmtLong(total)} en total. Liquidalas de una tirada 💪`
+      : 'Todavía no hay tareas cortas. Cargá el "⏱️ Tiempo estimado" (5 o 15 min) en tus temas y aparecen acá.';
+    $("qwList").innerHTML = qs.map((t) => `
+      <div class="qw-item">
+        <div>
+          <div class="qt">${esc(t.title)}</div>
+          ${t.desc ? `<div class="qd">${esc(t.desc)}</div>` : ""}
+        </div>
+        <span class="qtime">⏱️ ${fmtBadge(t.estimate)}</span>
+      </div>`).join("");
+    showOverlay("qwModal");
+  }
+
+  // ---------- Overlays ----------
+  function showOverlay(id) { $(id).hidden = false; }
+  function hideOverlay(id) { $(id).hidden = true; }
+
+  // ---------- Exportar ----------
+  function orderedRows() {
+    return ordered().map((t, i) => {
+      const q = quadOf(t);
+      return { orden: i + 1, cuadrante: QUAD[q].name, accion: QUAD[q].accion,
+        titulo: t.title, descripcion: t.desc || "",
+        urgencia: t.urgency, prioridad: t.importance,
+        tiempo: t.estimate == null ? "" : fmtLong(t.estimate) };
+    });
+  }
+  function today() { return new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" }); }
+  function stamp() { return new Date().toISOString().slice(0, 10); }
+  function guard() { if (!tasks.length) { toast("Cargá al menos un tema antes de descargar."); return false; } return true; }
+
+  function exportExcel() {
+    if (!guard()) return;
+    const data = orderedRows().map((r) => ({
+      "Orden": r.orden, "Cuadrante": r.cuadrante, "Qué hacer": r.accion,
+      "Tema": r.titulo, "Descripción": r.descripcion,
+      "Urgencia (1-5)": r.urgencia, "Prioridad (1-5)": r.prioridad, "Tiempo estimado": r.tiempo
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [ {wch:7},{wch:44},{wch:24},{wch:34},{wch:46},{wch:14},{wch:14},{wch:16} ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Matriz de Eisenhower");
+    XLSX.writeFile(wb, `Matriz-Eisenhower-${stamp()}.xlsx`);
+    toast("Excel descargado ✔");
+  }
+
+  function exportWord() {
+    if (!guard()) return;
+    const colors = { 1:"#ef4444", 2:"#3b82f6", 3:"#f59e0b", 4:"#64748b" };
+    const groups = [1,2,3,4].map((q) => ({ q, def: QUAD[q], items: ordered().filter((t) => quadOf(t) === q) })).filter((g) => g.items.length);
+    let body = `
+      <h1 style="font-family:Segoe UI,Arial;color:#1a1d33;">Matriz de Eisenhower</h1>
+      <p style="font-family:Segoe UI,Arial;color:#666;">Plan de acción · ${today()} · ${tasks.length} temas</p><hr/>`;
+    let n = 1;
+    groups.forEach((g) => {
+      body += `<h2 style="font-family:Segoe UI,Arial;color:${colors[g.q]};margin-top:22px;">${esc(g.def.name)}</h2>
+               <p style="font-family:Segoe UI,Arial;color:#888;font-style:italic;margin-top:-6px;">${esc(g.def.accion)}</p>
+               <table border="1" cellspacing="0" cellpadding="8" style="border-collapse:collapse;width:100%;font-family:Segoe UI,Arial;font-size:13px;">
+                 <tr style="background:#f0f0f5;"><th style="width:34px;">#</th><th style="text-align:left;">Tema</th>
+                 <th style="text-align:left;">Descripción</th><th style="width:60px;">⚡ Urg</th><th style="width:60px;">⭐ Prio</th><th style="width:80px;">⏱️ Tiempo</th></tr>`;
+      g.items.forEach((t) => {
+        body += `<tr><td style="text-align:center;font-weight:bold;">${n++}</td>
+            <td style="font-weight:bold;">${esc(t.title)}</td>
+            <td style="color:#444;">${esc(t.desc || "—")}</td>
+            <td style="text-align:center;">${t.urgency}</td>
+            <td style="text-align:center;">${t.importance}</td>
+            <td style="text-align:center;">${t.estimate == null ? "—" : esc(fmtLong(t.estimate))}</td></tr>`;
+      });
+      body += `</table>`;
+    });
+    const html = `<!DOCTYPE html><html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Matriz de Eisenhower</title></head><body>${body}</body></html>`;
+    downloadBlob(new Blob(['﻿', html], { type: "application/msword" }), `Matriz-Eisenhower-${stamp()}.doc`);
+    toast("Word descargado ✔");
+  }
+
+  function exportPdf() {
+    if (!guard()) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(26,29,51);
+    doc.text("Matriz de Eisenhower", 40, 50);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(120,120,140);
+    doc.text(`Plan de acción · ${today()} · ${tasks.length} temas`, 40, 68);
+    const colors = { 1:[239,68,68], 2:[59,130,246], 3:[245,158,11], 4:[100,116,139] };
+    let y = 90, n = 1;
+    [1,2,3,4].forEach((q) => {
+      const items = ordered().filter((t) => quadOf(t) === q);
+      if (!items.length) return;
+      const bodyRows = items.map((t) => [String(n++), t.title, t.desc || "—", String(t.urgency), String(t.importance), t.estimate == null ? "—" : fmtLong(t.estimate)]);
+      doc.autoTable({
+        startY: y,
+        head: [[ { content: QUAD[q].name + "  —  " + QUAD[q].accion, colSpan: 6 } ]],
+        body: [["#", "Tema", "Descripción", "Urg", "Prio", "Tiempo"], ...bodyRows],
+        theme: "grid",
+        styles: { font: "helvetica", fontSize: 9.5, cellPadding: 5, valign: "top", textColor: [40,40,60] },
+        headStyles: { fillColor: colors[q], textColor: [255,255,255], fontStyle: "bold", fontSize: 11 },
+        columnStyles: {
+          0: { cellWidth: 24, halign: "center", fontStyle: "bold" },
+          1: { cellWidth: 130, fontStyle: "bold" },
+          3: { cellWidth: 34, halign: "center" },
+          4: { cellWidth: 34, halign: "center" },
+          5: { cellWidth: 54, halign: "center" }
+        },
+        didParseCell: (d) => {
+          if (d.section === "body" && d.row.index === 0) {
+            d.cell.styles.fillColor = [240,240,245];
+            d.cell.styles.fontStyle = "bold"; d.cell.styles.textColor = [80,80,100];
+          }
+        },
+        margin: { left: 40, right: 40 }
+      });
+      y = doc.lastAutoTable.finalY + 18;
+    });
+    doc.save(`Matriz-Eisenhower-${stamp()}.pdf`);
+    toast("PDF descargado ✔");
+  }
+
+  function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  // ---------- Demo ----------
+  function loadDemo() {
+    const demo = [
+      { title: "Pagar factura de luz", desc: "Vence mañana, entrar al home banking.", urgency: 5, importance: 5, estimate: 15 },
+      { title: "Preparar propuesta cliente Vietur", desc: "Armar presupuesto y enviarlo.", urgency: 4, importance: 5, estimate: 120 },
+      { title: "Planificar viaje de trabajo", desc: "Definir fechas y reservar vuelos con tiempo.", urgency: 2, importance: 5, estimate: 60 },
+      { title: "Curso de finanzas", desc: "Avanzar 2 módulos esta semana.", urgency: 1, importance: 4, estimate: 60 },
+      { title: "Responder mensajes del grupo", desc: "", urgency: 4, importance: 2, estimate: 15 },
+      { title: "Agendar reunión con proveedor", desc: "Coordinar horario, no es clave.", urgency: 3, importance: 2, estimate: 5 },
+      { title: "Ordenar fotos del celular", desc: "Cuando tenga un rato libre.", urgency: 1, importance: 1, estimate: 30 },
+      { title: "Ver serie pendiente", desc: "", urgency: 2, importance: 1, estimate: 90 }
+    ].map((t, i) => ({ id: "demo" + i + Date.now(), ...t }));
+    tasks = demo.concat(tasks);
+    save(); render(); toast("Ejemplo cargado ✔");
+  }
+
+  // ---------- Eventos ----------
+  function bind() {
+    $("addBtn").onclick = addTask;
+    $("expExcel").onclick = exportExcel;
+    $("expWord").onclick = exportWord;
+    $("expPdf").onclick = exportPdf;
+    $("qwBtn").onclick = openQuickWins;
+    $("demoBtn").onclick = loadDemo;
+    $("clearBtn").onclick = () => {
+      if (!tasks.length) return;
+      if (confirm("¿Seguro que querés borrar TODOS los temas cargados?")) { tasks = []; save(); render(); toast("Todo borrado."); }
+    };
+    $("mSave").onclick = saveEdit;
+    $("mCancel").onclick = () => hideOverlay("editModal");
+    $("qwClose").onclick = () => hideOverlay("qwModal");
+
+    // Cerrar modal al tocar fondo
+    ["editModal","qwModal"].forEach((id) => {
+      $(id).addEventListener("click", (e) => { if (e.target === $(id)) hideOverlay(id); });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { hideOverlay("editModal"); hideOverlay("qwModal"); }
+    });
+
+    ["title","desc"].forEach((id) => {
+      $(id).addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); addTask(); } });
+    });
+    $("mTitle").addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); saveEdit(); } });
+
+    $("themeBtn").onclick = () => {
+      const cur = document.documentElement.getAttribute("data-theme");
+      const next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("eisen_theme", next); } catch (e) {}
+    };
+    try { const st = localStorage.getItem("eisen_theme"); if (st) document.documentElement.setAttribute("data-theme", st); } catch (e) {}
+  }
+
+  // ---------- Init ----------
+  load(); bind(); buildFormPills(); render();
+  $("title").focus();
+})();
+</script>
+</body>
+</html>
