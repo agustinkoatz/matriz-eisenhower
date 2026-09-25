@@ -6,6 +6,10 @@
 <title>Matriz de Eisenhower — Ordená tus pendientes</title>
 <meta name="description" content="Cargá tus pendientes, puntuá urgencia, prioridad y tiempo, arrastralos entre cuadrantes y descargá tu plan en Excel, Word o PDF." />
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap">
+
 <!-- Librerías para exportar -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,228 +17,247 @@
 
 <style>
   :root {
-    --bg: #0f1220;
-    --bg-soft: #171a2e;
-    --card: #1e2138;
-    --card-2: #252a45;
-    --line: #313657;
-    --text: #eef0ff;
-    --muted: #9aa0c7;
-    --accent: #7c5cff;
-    --accent-2: #00d4b8;
+    --paper: #ECEDF1;
+    --surface: #ffffff;
+    --surface-2: #f3f4f7;
+    --ink: #16171c;
+    --ink-soft: #5c606e;
+    --dot: rgba(20,22,30,.07);
 
-    --urg: #ef4444;
-    --prio: #3b82f6;
-    --time: #00c2a8;
+    --q1: #ff5a4d; --q1-ink: #7a1e17;
+    --q2: #2f6bff; --q2-ink: #16357f;
+    --q3: #f5a524; --q3-ink: #7a5008;
+    --q4: #7c879b; --q4-ink: #3a4152;
+    --time: #0fa971;
+    --accent: #2f6bff;
 
-    --q1: #ef4444; --q1-bg: rgba(239,68,68,.10);
-    --q2: #3b82f6; --q2-bg: rgba(59,130,246,.10);
-    --q3: #f59e0b; --q3-bg: rgba(245,158,11,.10);
-    --q4: #64748b; --q4-bg: rgba(100,116,139,.10);
-
-    --radius: 16px;
-    --shadow: 0 12px 40px rgba(0,0,0,.35);
+    --shadow: var(--ink);
+    --radius: 4px;
+    color-scheme: light;
   }
 
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --bg: #f4f5fb; --bg-soft: #ffffff; --card: #ffffff; --card-2: #f6f7fd;
-      --line: #e5e7f2; --text: #1a1d33; --muted: #6b7096;
-      --shadow: 0 12px 40px rgba(30,34,80,.10);
-      --q1-bg: rgba(239,68,68,.07); --q2-bg: rgba(59,130,246,.07);
-      --q3-bg: rgba(245,158,11,.09); --q4-bg: rgba(100,116,139,.09);
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #121318;
+      --surface: #1d1f27;
+      --surface-2: #262933;
+      --ink: #eceef4;
+      --ink-soft: #9aa0b0;
+      --dot: rgba(255,255,255,.06);
+      --shadow: #000000;
+      color-scheme: dark;
     }
   }
-  :root[data-theme="light"] {
-      --bg: #f4f5fb; --bg-soft: #ffffff; --card: #ffffff; --card-2: #f6f7fd;
-      --line: #e5e7f2; --text: #1a1d33; --muted: #6b7096;
-      --shadow: 0 12px 40px rgba(30,34,80,.10);
-      --q1-bg: rgba(239,68,68,.07); --q2-bg: rgba(59,130,246,.07);
-      --q3-bg: rgba(245,158,11,.09); --q4-bg: rgba(100,116,139,.09);
+  :root[data-theme="dark"] {
+      --paper: #121318;
+      --surface: #1d1f27;
+      --surface-2: #262933;
+      --ink: #eceef4;
+      --ink-soft: #9aa0b0;
+      --dot: rgba(255,255,255,.06);
+      --shadow: #000000;
+      color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(124,92,255,.18), transparent 60%),
-      radial-gradient(1000px 500px at 100% 0%, rgba(0,212,184,.14), transparent 55%),
-      var(--bg);
-    color: var(--text); min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--dot) 1.4px, transparent 1.4px);
+    background-size: 22px 22px;
+    min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased;
   }
 
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 80px; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding-block: 30px 90px; padding-inline: 18px; }
 
-  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
-  .brand { display: flex; align-items: center; gap: 14px; }
+  h1, h2, h3, .display { font-family: "Bricolage Grotesque", "Public Sans", sans-serif; font-weight: 800; letter-spacing: -.02em; }
+  .mono { font-family: "Space Mono", ui-monospace, monospace; }
+
+  /* Header */
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  .brand { display: flex; align-items: center; gap: 16px; }
   .logo {
-    width: 46px; height: 46px; border-radius: 13px; flex: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 22px; box-shadow: var(--shadow);
+    width: 54px; height: 54px; flex: none; background: var(--q2); color: #fff;
+    border: 2.5px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--shadow);
+    display: grid; place-items: center; font-size: 26px; font-weight: 800;
   }
-  .brand h1 { font-size: 21px; margin: 0; letter-spacing: -.3px; }
-  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
-  .theme-btn {
-    background: var(--card); color: var(--text); border: 1px solid var(--line);
-    padding: 9px 14px; border-radius: 11px; cursor: pointer; font-size: 13px; font-weight: 600; transition: .15s;
+  .brand h1 { font-size: 27px; margin: 0; text-wrap: balance; }
+  .brand p { margin: 3px 0 0; color: var(--ink-soft); font-size: 13.5px; max-width: 46ch; }
+
+  .btn-hard, .theme-btn, .btn, .exp, .pill {
+    border: 2px solid var(--ink); background: var(--surface); color: var(--ink);
+    box-shadow: 3px 3px 0 var(--shadow); cursor: pointer; transition: transform .08s, box-shadow .08s;
+    font-family: inherit;
   }
-  .theme-btn:hover { border-color: var(--accent); }
+  .btn-hard:hover, .theme-btn:hover, .btn:hover, .exp:hover, .pill:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--shadow); }
+  .btn-hard:active, .theme-btn:active, .btn:active, .exp:active, .pill:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--shadow); }
 
-  .grid-main { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 900px) { .grid-main { grid-template-columns: 1fr; } }
+  .theme-btn { padding: 10px 15px; border-radius: 7px; font-size: 12.5px; font-weight: 700; }
 
-  .card {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px;
+  .grid-main { display: grid; grid-template-columns: 390px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 920px) { .grid-main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface); border: 2.5px solid var(--ink); border-radius: 12px;
+    box-shadow: 6px 6px 0 var(--shadow); padding: 24px;
   }
-  .card h2 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.2px; }
-  .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 18px; }
+  .panel + .panel { margin-top: 20px; }
+  .panel-title { font-size: 18px; margin: 0 0 3px; }
+  .panel-sub { color: var(--ink-soft); font-size: 12.5px; margin: 0 0 18px; }
 
-  label.field { display: block; margin-bottom: 14px; }
-  label.field span { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .eyebrow {
+    display: inline-block; font-family: "Space Mono", monospace; font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em; padding: 3px 9px; border: 2px solid var(--ink);
+    border-radius: 20px; margin-bottom: 12px; background: var(--surface-2);
+  }
+
+  label.field { display: block; margin-bottom: 15px; }
+  label.field span { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
   input[type="text"], textarea {
-    width: 100%; background: var(--card-2); border: 1px solid var(--line); color: var(--text);
-    border-radius: 11px; padding: 11px 13px; font-size: 14px; font-family: inherit; resize: vertical; transition: .15s;
+    width: 100%; background: var(--surface-2); border: 2px solid var(--ink); color: var(--ink);
+    border-radius: 8px; padding: 12px 13px; font-size: 14px; font-family: inherit; resize: vertical; transition: box-shadow .12s;
   }
-  input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,92,255,.18); }
-  textarea { min-height: 60px; }
+  input[type="text"]:focus, textarea:focus { outline: none; box-shadow: 3px 3px 0 var(--accent); }
+  textarea { min-height: 62px; }
+  ::placeholder { color: var(--ink-soft); opacity: .8; }
 
   /* Escalas */
-  .scale { margin-bottom: 16px; }
-  .scale-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
-  .scale-head .name { font-size: 12.5px; font-weight: 700; }
-  .scale-head .name.urg { color: var(--urg); }
-  .scale-head .name.prio { color: var(--prio); }
-  .scale-head .name.time { color: var(--time); }
-  .scale-head .val { font-size: 11.5px; color: var(--muted); font-weight: 600; }
-  .pills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .scale { margin-bottom: 17px; }
+  .scale-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .scale-head .name { font-size: 13px; font-weight: 800; font-family: "Bricolage Grotesque", sans-serif; }
+  .scale-head .name.urg { color: var(--q1); } .scale-head .name.prio { color: var(--q2); } .scale-head .name.time { color: var(--time); }
+  .scale-head .val { font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .pills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
   .pills.time { grid-template-columns: repeat(6, 1fr); }
   .pill {
-    border: 1px solid var(--line); background: var(--card-2); color: var(--muted);
-    border-radius: 9px; padding: 9px 0; font-weight: 800; font-size: 13.5px; cursor: pointer; transition: .12s; text-align: center;
+    border-radius: 7px; padding: 10px 0; font-weight: 700; font-size: 14px; text-align: center;
+    box-shadow: 2px 2px 0 var(--shadow); font-family: "Space Mono", monospace;
   }
-  .pill:hover { border-color: var(--muted); }
-  .pills.urg  .pill.sel { background: var(--urg);  border-color: var(--urg);  color: #fff; }
-  .pills.prio .pill.sel { background: var(--prio); border-color: var(--prio); color: #fff; }
-  .pills.time .pill.sel { background: var(--time); border-color: var(--time); color: #04201c; }
+  .pills.time .pill { font-size: 12px; }
+  .pills.urg  .pill.sel { background: var(--q1);  color: #fff; }
+  .pills.prio .pill.sel { background: var(--q2); color: #fff; }
+  .pills.time .pill.sel { background: var(--time); color: #fff; }
 
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; border: none; cursor: pointer; font-weight: 700; font-size: 14.5px;
-    padding: 13px 16px; border-radius: 12px; color: #fff;
-    background: linear-gradient(135deg, var(--accent), #9b7bff);
-    transition: .15s; box-shadow: 0 8px 20px rgba(124,92,255,.35);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    font-weight: 800; font-size: 15.5px; padding: 14px 16px; border-radius: 9px; margin-top: 4px;
+    background: var(--q2); color: #fff; font-family: "Bricolage Grotesque", sans-serif;
   }
-  .btn:hover { transform: translateY(-1px); }
-  .btn.secondary { background: var(--card-2); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
-  .btn.secondary:hover { border-color: var(--accent); }
+  .btn.secondary { background: var(--surface-2); color: var(--ink); }
 
-  .hint { font-size: 11.5px; color: var(--muted); margin-top: 12px; text-align: center; }
-  .hint kbd { background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+  .hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 14px; text-align: center; font-family: "Space Mono", monospace; }
+  .hint kbd { background: var(--surface-2); border: 1.5px solid var(--ink); border-radius: 5px; padding: 1px 6px; font-size: 11px; }
 
+  /* Resumen */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-  .stat { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 10px; text-align: center; }
-  .stat .n { font-size: 24px; font-weight: 800; }
-  .stat .l { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
-  .stat.s1 .n { color: var(--q1); } .stat.s2 .n { color: var(--q2); }
-  .stat.s3 .n { color: var(--q3); } .stat.s4 .n { color: var(--q4); }
+  .stat { border: 2px solid var(--ink); border-radius: 8px; padding: 12px 8px; text-align: center; box-shadow: 2px 2px 0 var(--shadow); }
+  .stat .n { font-size: 26px; font-weight: 800; font-family: "Bricolage Grotesque", sans-serif; line-height: 1; }
+  .stat .l { font-size: 9.5px; color: var(--ink-soft); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-top: 5px; font-family: "Space Mono", monospace; }
+  .stat.s1 { background: rgba(255,90,77,.12); } .stat.s1 .n { color: var(--q1); }
+  .stat.s2 { background: rgba(47,107,255,.12); } .stat.s2 .n { color: var(--q2); }
+  .stat.s3 { background: rgba(245,165,36,.14); } .stat.s3 .n { color: var(--q3); }
+  .stat.s4 { background: rgba(124,135,155,.14); } .stat.s4 .n { color: var(--q4); }
 
   .mini-stats {
-    display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted);
-    margin-bottom: 16px; padding: 10px 13px; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px;
+    display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ink-soft);
+    margin-bottom: 16px; padding: 11px 14px; background: var(--surface-2); border: 2px solid var(--ink); border-radius: 8px;
+    font-family: "Space Mono", monospace;
   }
-  .mini-stats b { color: var(--text); }
+  .mini-stats b { color: var(--ink); }
 
-  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  /* Matriz */
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 0 0 18px; flex-wrap: wrap; gap: 10px; }
+  .section-title h2 { margin: 0; font-size: 20px; }
+  .section-title .desc { color: var(--ink-soft); font-size: 12px; font-family: "Space Mono", monospace; }
+
+  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 560px) { .matrix { grid-template-columns: 1fr; } }
 
-  .quad { border-radius: var(--radius); border: 1.5px solid var(--line); padding: 16px; min-height: 200px; display: flex; flex-direction: column; transition: .12s; }
-  .quad.q1 { border-color: var(--q1); background: var(--q1-bg); }
-  .quad.q2 { border-color: var(--q2); background: var(--q2-bg); }
-  .quad.q3 { border-color: var(--q3); background: var(--q3-bg); }
-  .quad.q4 { border-color: var(--q4); background: var(--q4-bg); }
-  .quad.drop-hover { box-shadow: 0 0 0 3px var(--accent) inset; transform: scale(1.005); }
-
-  .quad-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-  .quad-head .qname { font-weight: 800; font-size: 15px; }
-  .quad.q1 .qname { color: var(--q1); } .quad.q2 .qname { color: var(--q2); }
-  .quad.q3 .qname { color: var(--q3); } .quad.q4 .qname { color: var(--q4); }
-  .quad-head .qcount { font-size: 12px; color: var(--muted); font-weight: 700; }
-  .quad .qmeta { font-size: 11.5px; color: var(--muted); margin: 0 0 12px; }
+  .quad { border: 2.5px solid var(--ink); border-radius: 10px; box-shadow: 4px 4px 0 var(--shadow); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; min-height: 210px; transition: transform .08s, box-shadow .08s; }
+  .quad.drop-hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--accent); }
+  .quad-band { padding: 12px 15px; border-bottom: 2.5px solid var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .quad.q1 .quad-band { background: var(--q1); } .quad.q2 .quad-band { background: var(--q2); }
+  .quad.q3 .quad-band { background: var(--q3); } .quad.q4 .quad-band { background: var(--q4); }
+  .quad-band .qname { font-weight: 800; font-size: 15.5px; color: #fff; font-family: "Bricolage Grotesque", sans-serif; }
+  .quad.q3 .quad-band .qname { color: var(--q3-ink); }
+  .quad-band .qcount { font-family: "Space Mono", monospace; font-weight: 700; font-size: 13px; color: #fff; background: rgba(0,0,0,.22); border-radius: 20px; min-width: 24px; text-align: center; padding: 1px 7px; }
+  .quad.q3 .quad-band .qcount { color: var(--q3-ink); background: rgba(0,0,0,.14); }
+  .quad-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+  .qmeta { font-size: 11px; color: var(--ink-soft); margin: 0 0 12px; font-family: "Space Mono", monospace; text-transform: uppercase; letter-spacing: .04em; }
   .q-list { flex: 1; min-height: 40px; }
 
   .task {
-    background: var(--card); border: 1px solid var(--line); border-radius: 11px;
-    padding: 10px 12px 9px; margin-bottom: 9px; position: relative; cursor: grab;
+    background: var(--surface); border: 2px solid var(--ink); border-radius: 8px;
+    padding: 11px 12px 10px; margin-bottom: 10px; position: relative; cursor: grab; transition: transform .08s, box-shadow .08s;
   }
+  .task:hover { box-shadow: 3px 3px 0 var(--shadow); transform: translate(-1px,-1px); }
   .task:active { cursor: grabbing; }
-  .task.dragging { opacity: .45; }
+  .task.dragging { opacity: .4; }
   .task .rank {
-    position: absolute; top: -7px; left: -7px; min-width: 20px; height: 20px; padding: 0 5px;
-    border-radius: 20px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800;
-    display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    position: absolute; top: -10px; left: -10px; width: 24px; height: 24px;
+    background: var(--accent); color: #fff; font-family: "Space Mono", monospace; font-size: 12px; font-weight: 700;
+    display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 6px; box-shadow: 2px 2px 0 var(--shadow);
   }
-  .task .tt { font-weight: 700; font-size: 13.5px; padding-right: 46px; }
-  .task .td { font-size: 12px; color: var(--muted); margin-top: 3px; white-space: pre-wrap; word-break: break-word; }
-  .task .badges { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
-  .task .badge { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); }
-  .task .badge.u { color: var(--urg); border-color: var(--urg); background: var(--q1-bg); }
-  .task .badge.p { color: var(--prio); border-color: var(--prio); background: var(--q2-bg); }
-  .task .badge.t { color: var(--time); border-color: var(--time); background: rgba(0,194,168,.10); }
+  .task .tt { font-weight: 700; font-size: 14px; padding-right: 44px; padding-left: 4px; }
+  .task .td { font-size: 12px; color: var(--ink-soft); margin-top: 3px; padding-left: 4px; white-space: pre-wrap; word-break: break-word; }
+  .task .badges { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; padding-left: 4px; }
+  .task .badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1.5px solid var(--ink); font-family: "Space Mono", monospace; }
+  .task .badge.u { color: var(--q1); background: rgba(255,90,77,.12); }
+  .task .badge.p { color: var(--q2); background: rgba(47,107,255,.12); }
+  .task .badge.t { color: var(--time); background: rgba(15,169,113,.12); }
   .task .icobtn {
-    position: absolute; width: 20px; height: 20px; border-radius: 6px; border: none; background: transparent;
-    color: var(--muted); cursor: pointer; line-height: 1; display: grid; place-items: center; transition: .15s;
+    position: absolute; width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid transparent; background: transparent;
+    color: var(--ink-soft); cursor: pointer; line-height: 1; display: grid; place-items: center; transition: .12s; font-family: inherit;
   }
-  .task .edit { top: 8px; right: 30px; font-size: 12px; }
-  .task .edit:hover { background: var(--card-2); color: var(--accent); }
-  .task .del { top: 8px; right: 8px; font-size: 15px; }
-  .task .del:hover { background: var(--q1-bg); color: var(--q1); }
-  .quad .empty { color: var(--muted); font-size: 12.5px; font-style: italic; margin: auto 0; text-align: center; opacity: .7; padding: 14px 0; }
+  .task .edit { top: 9px; right: 32px; font-size: 12px; }
+  .task .edit:hover { border-color: var(--ink); background: var(--surface-2); color: var(--accent); }
+  .task .del { top: 9px; right: 9px; font-size: 16px; }
+  .task .del:hover { border-color: var(--ink); background: var(--q1); color: #fff; }
+  .empty { color: var(--ink-soft); font-size: 12.5px; margin: auto 0; text-align: center; opacity: .7; padding: 16px 0; font-family: "Space Mono", monospace; }
 
-  .export-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
-  .export-bar .lbl { font-size: 13px; color: var(--muted); font-weight: 600; margin-right: 2px; }
+  /* Barra de acciones */
+  .export-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+  .export-bar .lbl { font-size: 12px; color: var(--ink-soft); font-weight: 700; font-family: "Space Mono", monospace; text-transform: uppercase; letter-spacing: .05em; }
   .exp {
-    display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; font-size: 13.5px;
-    padding: 11px 16px; border-radius: 11px; color: #fff; border: none; transition: .15s;
+    display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px;
+    padding: 11px 16px; border-radius: 8px; color: #fff; font-family: "Bricolage Grotesque", sans-serif;
   }
-  .exp:hover { transform: translateY(-1px); filter: brightness(1.05); }
-  .exp.qw    { background: var(--time); color: #04201c; }
+  .exp.qw    { background: var(--time); }
   .exp.excel { background: #16a34a; }
-  .exp.word  { background: #2563eb; }
-  .exp.pdf   { background: #dc2626; }
-  .exp.clear { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); }
-  .exp.clear:hover { color: var(--q1); border-color: var(--q1); transform: none; }
+  .exp.word  { background: var(--q2); }
+  .exp.pdf   { background: var(--q1); }
+  .exp.clear { background: var(--surface); color: var(--ink); }
   .exp svg { width: 16px; height: 16px; }
 
-  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 16px; flex-wrap: wrap; gap: 10px; }
-  .section-title h2 { margin: 0; font-size: 17px; }
-  .section-title .desc { color: var(--muted); font-size: 12.5px; }
-
   /* Modal */
-  .overlay { position: fixed; inset: 0; background: rgba(6,8,18,.6); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 200; padding: 16px; }
+  .overlay { position: fixed; inset: 0; background: rgba(10,12,18,.55); backdrop-filter: blur(2px); display: grid; place-items: center; z-index: 200; padding: 16px; }
   .overlay[hidden] { display: none; }
-  .modal-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 22px; width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; }
-  .modal-card h3 { margin: 0 0 4px; font-size: 17px; }
-  .modal-card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-  .modal-actions .btn { width: auto; flex: 1; }
+  .modal-card { background: var(--surface); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 8px 8px 0 var(--shadow); padding: 24px; width: 100%; max-width: 450px; max-height: 90vh; overflow: auto; }
+  .modal-card h3 { margin: 0 0 4px; font-size: 19px; }
+  .modal-card .panel-sub { margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions .btn { flex: 1; margin-top: 0; }
   .qw-item {
-    background: var(--card-2); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; margin-bottom: 8px;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 2px solid var(--ink); border-radius: 8px; padding: 11px 13px; margin-bottom: 9px; box-shadow: 2px 2px 0 var(--shadow);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface);
   }
-  .qw-item .qt { font-weight: 700; font-size: 13.5px; }
-  .qw-item .qd { font-size: 11.5px; color: var(--muted); }
-  .qw-item .qtime { font-size: 11px; font-weight: 800; color: var(--time); border: 1px solid var(--time); background: rgba(0,194,168,.10); border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+  .qw-item .qt { font-weight: 700; font-size: 14px; }
+  .qw-item .qd { font-size: 11.5px; color: var(--ink-soft); }
+  .qw-item .qtime { font-family: "Space Mono", monospace; font-size: 11px; font-weight: 700; color: #fff; background: var(--time); border: 2px solid var(--ink); border-radius: 6px; padding: 4px 9px; white-space: nowrap; }
 
   .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: #111; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
-    box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: .25s; z-index: 300; border: 1px solid rgba(255,255,255,.12);
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--paper); padding: 13px 22px; border: 2px solid var(--ink); border-radius: 9px;
+    font-size: 13.5px; font-weight: 700; box-shadow: 4px 4px 0 var(--shadow); opacity: 0; pointer-events: none;
+    transition: .22s; z-index: 300; font-family: "Space Mono", monospace;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+  footer { text-align: center; color: var(--ink-soft); font-size: 12px; margin-top: 44px; font-family: "Space Mono", monospace; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -254,9 +277,10 @@
   <div class="grid-main">
 
     <aside>
-      <div class="card">
-        <h2>Cargar un tema</h2>
-        <p class="sub">Anotá todo lo que tengas dando vueltas. Uno por uno.</p>
+      <div class="panel">
+        <span class="eyebrow">Nuevo tema</span>
+        <h2 class="panel-title">Cargá un pendiente</h2>
+        <p class="panel-sub">Anotá todo lo que tengas dando vueltas. Uno por uno.</p>
 
         <label class="field">
           <span>Título del tema *</span>
@@ -272,24 +296,23 @@
           <div class="scale-head"><span class="name urg">⚡ Urgencia</span><span class="val" id="urgVal">Baja</span></div>
           <div class="pills urg" id="urgPills"></div>
         </div>
-
         <div class="scale">
           <div class="scale-head"><span class="name prio">⭐ Prioridad</span><span class="val" id="prioVal">Media</span></div>
           <div class="pills prio" id="prioPills"></div>
         </div>
-
         <div class="scale">
           <div class="scale-head"><span class="name time">⏱️ Tiempo estimado</span><span class="val" id="timeVal">Sin estimar</span></div>
           <div class="pills time" id="timePills"></div>
         </div>
 
         <button class="btn" id="addBtn">＋ Agregar a la matriz</button>
-        <p class="hint">1–2 = bajo · 3–5 = alto &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> para agregar rápido</p>
+        <p class="hint">1–2 = bajo · 3–5 = alto &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> agrega rápido</p>
       </div>
 
-      <div class="card" style="margin-top:16px;">
-        <h2>Resumen</h2>
-        <p class="sub">Cómo se reparten tus temas.</p>
+      <div class="panel">
+        <span class="eyebrow">Resumen</span>
+        <h2 class="panel-title">Cómo se reparten</h2>
+        <p class="panel-sub">Tus temas por cuadrante.</p>
         <div class="stats">
           <div class="stat s1"><div class="n" id="c1">0</div><div class="l">Hacé ya</div></div>
           <div class="stat s2"><div class="n" id="c2">0</div><div class="l">Planificá</div></div>
@@ -297,7 +320,7 @@
           <div class="stat s4"><div class="n" id="c4">0</div><div class="l">Después</div></div>
         </div>
         <div class="mini-stats">
-          <span>⏱️ Tiempo total: <b id="totalTime">—</b></span>
+          <span>⏱️ Total: <b id="totalTime">—</b></span>
           <span>⚡ Quick wins: <b id="qwCount">0</b></span>
         </div>
         <button class="btn secondary" id="demoBtn">Cargar ejemplo de prueba</button>
@@ -305,7 +328,7 @@
     </aside>
 
     <main>
-      <div class="card">
+      <div class="panel">
         <div class="section-title">
           <h2>Tu matriz</h2>
           <div class="desc">Arrastrá una card a otro cuadrante · ✎ para editar</div>
@@ -313,41 +336,34 @@
 
         <div class="matrix">
           <div class="quad q1" id="q1" data-q="1">
-            <div class="quad-head"><span class="qname">🔥 Hacé ya</span><span class="qcount" id="qc1">0</span></div>
-            <p class="qmeta">Urgente + Prioritario · Prioridad máxima</p>
-            <div class="q-list" id="list1"></div>
+            <div class="quad-band"><span class="qname">🔥 Hacé ya</span><span class="qcount" id="qc1">0</span></div>
+            <div class="quad-body"><p class="qmeta">Urgente + Prioritario · máxima</p><div class="q-list" id="list1"></div></div>
           </div>
           <div class="quad q2" id="q2" data-q="2">
-            <div class="quad-head"><span class="qname">📅 Planificá</span><span class="qcount" id="qc2">0</span></div>
-            <p class="qmeta">Prioritario, no urgente · Agendá cuándo</p>
-            <div class="q-list" id="list2"></div>
+            <div class="quad-band"><span class="qname">📅 Planificá</span><span class="qcount" id="qc2">0</span></div>
+            <div class="quad-body"><p class="qmeta">Prioritario, no urgente · agendá</p><div class="q-list" id="list2"></div></div>
           </div>
           <div class="quad q3" id="q3" data-q="3">
-            <div class="quad-head"><span class="qname">🤝 Delegá / rápido</span><span class="qcount" id="qc3">0</span></div>
-            <p class="qmeta">Urgente, poco prioritario · Delegá o resolvelo ya</p>
-            <div class="q-list" id="list3"></div>
+            <div class="quad-band"><span class="qname">🤝 Delegá / rápido</span><span class="qcount" id="qc3">0</span></div>
+            <div class="quad-body"><p class="qmeta">Urgente, poco prioritario · delegá</p><div class="q-list" id="list3"></div></div>
           </div>
           <div class="quad q4" id="q4" data-q="4">
-            <div class="quad-head"><span class="qname">🗑️ Después / eliminá</span><span class="qcount" id="qc4">0</span></div>
-            <p class="qmeta">Ni urgente ni prioritario · Bajá la prioridad</p>
-            <div class="q-list" id="list4"></div>
+            <div class="quad-band"><span class="qname">🗑️ Después</span><span class="qcount" id="qc4">0</span></div>
+            <div class="quad-body"><p class="qmeta">Ni urgente ni prioritario · bajá</p><div class="q-list" id="list4"></div></div>
           </div>
         </div>
 
         <div class="export-bar">
           <button class="exp qw" id="qwBtn">⚡ Quick wins</button>
-          <span class="lbl" style="margin-left:8px;">Descargar:</span>
+          <span class="lbl" style="margin-left:6px;">Bajar:</span>
           <button class="exp excel" id="expExcel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Excel
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Excel
           </button>
           <button class="exp word" id="expWord">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Word
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Word
           </button>
           <button class="exp pdf" id="expPdf">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            PDF
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF
           </button>
           <button class="exp clear" id="clearBtn" style="margin-left:auto;">🧹 Borrar todo</button>
         </div>
@@ -356,14 +372,14 @@
 
   </div>
 
-  <footer>Se guarda solo en tu navegador. Podés cerrar y volver, tus temas siguen acá.</footer>
+  <footer>Se guarda solo en tu navegador. Cerrá y volvé cuando quieras — tus temas siguen acá.</footer>
 </div>
 
 <!-- Modal editar -->
 <div class="overlay" id="editModal" hidden>
   <div class="modal-card">
     <h3>Editar tema</h3>
-    <p class="sub">Cambiá lo que quieras y guardá.</p>
+    <p class="panel-sub">Cambiá lo que quieras y guardá.</p>
     <label class="field"><span>Título del tema *</span><input type="text" id="mTitle" autocomplete="off" /></label>
     <label class="field"><span>Descripción</span><textarea id="mDesc"></textarea></label>
     <div class="scale">
@@ -389,7 +405,7 @@
 <div class="overlay" id="qwModal" hidden>
   <div class="modal-card">
     <h3>⚡ Quick wins</h3>
-    <p class="sub" id="qwSummary"></p>
+    <p class="panel-sub" id="qwSummary"></p>
     <div id="qwList"></div>
     <div class="modal-actions"><button class="btn secondary" id="qwClose" style="flex:1;">Cerrar</button></div>
   </div>
@@ -480,7 +496,6 @@
   }
 
   // ---------- Pills ----------
-  // Construye una fila de pills reutilizable.
   function buildPillRow(container, values, texts, getSel, setSel, valEl, labelMap, allowNull) {
     container.innerHTML = "";
     values.forEach((v, i) => {
@@ -489,7 +504,7 @@
       b.textContent = texts[i];
       b.onclick = () => {
         let nv = v;
-        if (allowNull && getSel() === v) nv = null; // volver a tocar = deseleccionar
+        if (allowNull && getSel() === v) nv = null;
         setSel(nv);
         [...container.children].forEach((el, idx) => el.classList.toggle("sel", values[idx] === nv));
         if (valEl) valEl.textContent = nv == null ? (allowNull ? "Sin estimar" : "") : labelMap[nv];
@@ -556,7 +571,6 @@
     });
     document.querySelectorAll(".task").forEach(bindDrag);
 
-    // Resumen de tiempo
     const totalMin = tasks.reduce((a, t) => a + (t.estimate || 0), 0);
     $("totalTime").textContent = totalMin ? fmtLong(totalMin) : "—";
     $("qwCount").textContent = tasks.filter(isQuickWin).length;
@@ -698,10 +712,10 @@
 
   function exportWord() {
     if (!guard()) return;
-    const colors = { 1:"#ef4444", 2:"#3b82f6", 3:"#f59e0b", 4:"#64748b" };
+    const colors = { 1:"#ff5a4d", 2:"#2f6bff", 3:"#f5a524", 4:"#7c879b" };
     const groups = [1,2,3,4].map((q) => ({ q, def: QUAD[q], items: ordered().filter((t) => quadOf(t) === q) })).filter((g) => g.items.length);
     let body = `
-      <h1 style="font-family:Segoe UI,Arial;color:#1a1d33;">Matriz de Eisenhower</h1>
+      <h1 style="font-family:Segoe UI,Arial;color:#16171c;">Matriz de Eisenhower</h1>
       <p style="font-family:Segoe UI,Arial;color:#666;">Plan de acción · ${today()} · ${tasks.length} temas</p><hr/>`;
     let n = 1;
     groups.forEach((g) => {
@@ -731,11 +745,11 @@
     if (!guard()) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(26,29,51);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(22,23,28);
     doc.text("Matriz de Eisenhower", 40, 50);
     doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(120,120,140);
     doc.text(`Plan de acción · ${today()} · ${tasks.length} temas`, 40, 68);
-    const colors = { 1:[239,68,68], 2:[59,130,246], 3:[245,158,11], 4:[100,116,139] };
+    const colors = { 1:[255,90,77], 2:[47,107,255], 3:[245,165,36], 4:[124,135,155] };
     let y = 90, n = 1;
     [1,2,3,4].forEach((q) => {
       const items = ordered().filter((t) => quadOf(t) === q);
@@ -808,7 +822,6 @@
     $("mCancel").onclick = () => hideOverlay("editModal");
     $("qwClose").onclick = () => hideOverlay("qwModal");
 
-    // Cerrar modal al tocar fondo
     ["editModal","qwModal"].forEach((id) => {
       $(id).addEventListener("click", (e) => { if (e.target === $(id)) hideOverlay(id); });
     });
